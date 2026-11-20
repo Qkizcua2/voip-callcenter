@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Semestral project for VoIP I (VSB-TU Ostrava): a call center built on Asterisk with agents, queues and IVR.">
+    <title>Call Center on Asterisk — VoIP I Semestral Project</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="logo">☎ Call Center on Asterisk</span>
+            <p class="course">VoIP I — Semestral Project</p>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#top" class="nav-link active">Title</a></li>
+            <li><a href="#introduction" class="nav-link">1. Introduction</a></li>
+            <li><a href="#state-of-the-art" class="nav-link">2. State of the Art</a></li>
+            <li><a href="#technology" class="nav-link">3. Technology &amp; Configuration</a></li>
+            <li><a href="#demonstration" class="nav-link">4. Practical Demonstration</a></li>
+            <li><a href="#opinion" class="nav-link">5. Opinion &amp; Contribution</a></li>
+            <li><a href="#conclusion" class="nav-link">6. Conclusion</a></li>
+            <li><a href="#references" class="nav-link">7. References</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <p><strong>Sergio Alcaide Nieto</strong></p>
+            <p><strong>Carlos Antonio Alonso Antona</strong></p>
+        </div>
+    </nav>
+
+    <main class="content">
+
+        <!-- ===================== TITLE ===================== -->
+        <header class="hero" id="top">
+            <p class="kicker">Faculty of Electrical Engineering and Computer Science · VSB-TU Ostrava</p>
+            <h1>Call Center on Asterisk</h1>
+            <p class="subtitle">Call center with agents, queues and IVR — open-source VoIP solution</p>
+            <div class="authors">
+                <div class="author">
+                    <span class="author-name">Sergio Alcaide Nieto</span>
+                </div>
+                <div class="author">
+                    <span class="author-name">Carlos Antonio Alonso Antona</span>
+                </div>
+            </div>
+            <p class="course-meta">Subject: <strong>VoIP I</strong> · Semestral Project · Topic 8 of the assignment</p>
+        </header>
+
+        <!-- ===================== 1. INTRODUCTION ===================== -->
+        <section class="section" id="introduction">
+            <h2><span class="section-number">1</span> Introduction</h2>
+
+            <p>
+                Telephone-based customer service is one of the oldest and still most widely used channels of
+                communication between companies and their clients. A <strong>call center</strong> is a centralized
+                facility — physical or virtual — in which a group of operators (<em>agents</em>) handles large
+                volumes of incoming and outgoing calls. Modern call centers rely on three pillars:
+                an <strong>Interactive Voice Response (IVR)</strong> system that greets and routes callers
+                automatically, <strong>queues</strong> that hold callers until an agent becomes available, and
+                the <strong>agents themselves</strong>, who answer calls from their workstations using softphones
+                or IP phones.
+            </p>
+
+            <p>
+                Traditionally, call center functionality was provided by expensive proprietary platforms
+                (Cisco, Avaya, Genesys, …). Since the early 2000s, open-source telephony has changed this
+                landscape. <strong>Asterisk</strong>, described by its authors as <em>&ldquo;the world's most
+                popular open source communications project&rdquo;</em>
+                <a href="#ref-1">[1]</a>, can be turned into a full call center platform:
+                it natively supports IVR systems, call queues, agent logins, voicemail, call recording and
+                integrations with external databases and applications through AGI, AMI and ARI
+                <a href="#ref-2">[2]</a>.
+            </p>
+
+            <p>
+                The goal of this project is to <strong>design, configure and practically demonstrate a working
+                call center based on Asterisk</strong>. The call center will feature a multi-level IVR menu
+                driven by DTMF tones, one or more call queues with configurable distribution strategies, and
+                several agents that can log in and out of queues dynamically. The whole solution is built
+                exclusively with free, open-source software, which makes it reproducible at almost zero cost.
+            </p>
+
+            <p>
+                Throughout the documentation we explain every building block in detail (Asterisk's PJSIP
+                endpoint configuration, the dialplan, <code>queues.conf</code>, the IVR structure and the
+                AMI events used to supervise agent activity), describe the practical laboratory setup used
+                for the demonstration, and evaluate the result from technical and practical points of view.
+                Finally, we share our own opinion on the topic and present our own contribution to its
+                elaboration.
+            </p>
+
+            <div class="callout info">
+                <strong>Project scope in one sentence:</strong> build a small but complete call center —
+                IVR, queues and agents — on a single Asterisk server, demonstrate it live with softphones
+                and simulated calls, and document how every piece works.
+            </div>
+        </section>
+
+        <!-- ===================== 2. STATE OF THE ART ===================== -->
+        <section class="section" id="state-of-the-art">
+            <h2><span class="section-number">2</span> State of the Art</h2>
+
+            <h3>2.1 From circuit-switched call centers to IP</h3>
+
+            <p>
+                The first call centers appeared in the 1970s and 1980s as rooms full of operators served by
+                an <strong>Automatic Call Distributor (ACD)</strong> connected to a time-division multiplexing
+                (TDM) private branch exchange (PBX). Calls were distributed by simple rules, and the
+                integration with company databases — so-called <em>Computer Telephony Integration (CTI)</em> —
+                was performed through proprietary links. These systems were effective, but expensive and
+                rigid: capacity was fixed by hardware, the software was vendor-locked, and agents had to be
+                physically present in the call center premises <a href="#ref-3">[3]</a>.
+            </p>
+
+            <p>
+                The convergence of voice and data networks in the early 2000s gave rise to the
+                <strong>IP call center</strong>. Voice is transported as packets using VoIP protocols such
+                as SIP <a href="#ref-4">[4]</a>, which removed the dependency on TDM hardware and allowed
+                agents to work from anywhere with a broadband connection. The call center logic itself
+                became software running on commodity servers — and this is precisely the niche into which
+                open-source PBX projects emerged. <strong>Asterisk</strong>, first released by Mark Spencer
+                in 2000, became the most widely deployed open-source communications platform and a common
+                foundation for both PBXs and call centers <a href="#ref-1">[1]</a>.
+            </p>
+
+            <h3>2.2 The cloud and omnichannel era</h3>
+
+            <p>
+                Since the 2010s the industry has been shifting towards <strong>Contact Center as a Service
+                (CCaaS)</strong>: fully managed platforms such as Amazon Connect
+                <a href="#ref-5">[5]</a> or Genesys Cloud <a href="#ref-6">[6]</a> are rented per agent per
+                month instead of being owned. Alongside voice, modern systems unify email, web chat and
+                messaging apps into a single agent desktop (<em>omnichannel</em>), and the COVID-19 pandemic
+                greatly accelerated the adoption of fully remote agent teams.
+            </p>
+
+            <p>
+                The commercial licensing model, however, remains costly: large platforms charge tens of euros
+                per agent every month, which for schools, small businesses, non-profit organizations and
+                developing markets is often prohibitive. This economic gap is the main reason why open-source
+                call center solutions remain relevant — they require only commodity hardware and offer
+                essentially unlimited seats.
+            </p>
+
+            <h3>2.3 Open-source platforms</h3>
+
+            <p>
+                Several open-source projects address the call center domain. They can be grouped by the role
+                they play in a VoIP infrastructure:
+            </p>
+
+            <ul>
+                <li>
+                    <strong>Asterisk</strong> — a full PBX and media server. Its <code>app_queue</code>
+                    module implements call queues with multiple distribution strategies, agents can log in
+                    and out dynamically, and IVR menus are built directly in the dialplan. Complete call
+                    center suites such as <strong>VICIdial</strong> <a href="#ref-9">[9]</a> are built on
+                    top of it <a href="#ref-2">[2]</a>.
+                </li>
+                <li>
+                    <strong>FreeSWITCH</strong> — a fork of Asterisk created in 2006 with a more modular
+                    architecture; it performs well under very high load, but is generally considered more
+                    complex to configure <a href="#ref-7">[7]</a> <a href="#ref-2">[2]</a>.
+                </li>
+                <li>
+                    <strong>Kamailio / OpenSIPS</strong> — SIP proxies (routers, not media servers) able to
+                    handle hundreds of thousands of simultaneous users. In large deployments they are often
+                    placed in front of Asterisk farms as a signaling tier, while Asterisk handles the media
+                    and the call center logic <a href="#ref-8">[8]</a>.
+                </li>
+            </ul>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Platform</th>
+                        <th>Role</th>
+                        <th>Call center features</th>
+                        <th>Typical scale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Asterisk</td>
+                        <td>PBX / media server</td>
+                        <td>Native (queues, IVR, agents)</td>
+                        <td>SMEs to carriers</td>
+                    </tr>
+                    <tr>
+                        <td>FreeSWITCH</td>
+                        <td>PBX / media server</td>
+                        <td>Native (modular)</td>
+                        <td>High-load platforms</td>
+                    </tr>
+                    <tr>
+                        <td>Kamailio</td>
+                        <td>SIP proxy / router</td>
+                        <td>None (signaling only)</td>
+                        <td>Hundreds of thousands of users</td>
+                    </tr>
+                    <tr>
+                        <td>Commercial (Genesys, Cisco)</td>
+                        <td>Turnkey suite</td>
+                        <td>Full omnichannel + AI</td>
+                        <td>Enterprise, pay per agent</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>2.4 Current trends</h3>
+
+            <p>
+                Two trends are currently reshaping the field. First, <strong>WebRTC</strong> turns the web
+                browser into a full agent desktop: agents need no installed softphone, and as the course
+                material states, <em>&ldquo;the website becomes the call center&rdquo;</em>
+                <a href="#ref-10">[10]</a> <a href="#ref-11">[11]</a>. Gateways such as Asterisk can translate
+                between WebRTC and SIP, which is exactly the technology behind modern browser-based agent
+                consoles. Second, <strong>artificial intelligence</strong> (automatic speech recognition,
+                real-time transcription, chatbots and sentiment-based routing) is moving from research into
+                production — mostly in cloud platforms, but increasingly integrable with open-source stacks
+                through external APIs.
+            </p>
+
+            <div class="callout info">
+                <strong>Where our project fits:</strong> this project builds on Asterisk — the most
+                established open-source platform — and implements on it the three pillars that every call
+                center, cloud or on-premises, still relies on: an IVR, call queues and agents.
+            </div>
+        </section>
+
+        <!-- ===================== 3. TECHNOLOGY & CONFIGURATION ===================== -->
+        <section class="section" id="technology">
+            <h2><span class="section-number">3</span> Technology &amp; Configuration</h2>
+
+            <h3>3.1 Where the call center lives: Asterisk architecture</h3>
+
+            <p>
+                Asterisk consists of a <strong>core</strong> and a set of loadable <strong>modules</strong>
+                (channel drivers, codecs and applications). The core reads the text configuration files from
+                <code>/etc/asterisk/</code>, creates a <em>channel</em> for every call leg and executes the
+                <strong>dialplan</strong>, the script that decides what happens to each call. Channels are
+                finally joined through the <em>bridging</em> infrastructure
+                <a href="#ref-2">[2]</a>. For SIP endpoints we use the modern <code>chan_pjsip</code>
+                driver; the older <code>chan_sip</code> is deprecated.
+            </p>
+
+            <p>
+                Four files are the heart of our lab: <code>pjsip.conf</code> (SIP accounts),
+                <code>extensions.conf</code> (dialplan), <code>queues.conf</code> (call queues) and
+                <code>voicemail.conf</code>. Changes are applied from the CLI with commands such as
+                <code>pjsip reload</code> and <code>queue reload all</code>, and checked with
+                <code>pjsip show endpoints</code> or <code>queue show</code>.
+            </p>
+
+            <h3>3.2 SIP endpoints: pjsip.conf</h3>
+
+            <p>
+                PJSIP is configured with small reusable objects: a <strong>transport</strong> (how SIP
+                messages travel), an <strong>auth</strong> object (credentials), an <strong>AoR</strong>
+                (<em>Address of Record</em> — where the endpoint can be reached), and an
+                <strong>endpoint</strong> (the profile tying them together)
+                <a href="#ref-12">[12]</a>. Without an AoR, an endpoint cannot receive calls.
+            </p>
+
+            <p class="listing-caption">Listing 3.1 — Three endpoints in <code>pjsip.conf</code> (caller 1000, agents 2001 and 2002)</p>
+            <pre><code>; /etc/asterisk/pjsip.conf (excerpt)
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+
+[auth-1000]
+type=auth
+auth_type=userpass
+username=1000
+password=Secret1000!
+
+[aor-1000]
+type=aor
+max_contacts=1
+
+[1000]
+type=endpoint
+transport=transport-udp
+context=from-internal
+disallow=all
+allow=ulaw
+auth=auth-1000
+aors=aor-1000
+callerid="Caller" &lt;1000&gt;
+
+; --- Agent 2001 (agent 2002 is configured identically) ---
+[auth-2001]
+type=auth
+auth_type=userpass
+username=2001
+password=Secret2001!
+
+[aor-2001]
+type=aor
+max_contacts=1
+
+[2001]
+type=endpoint
+transport=transport-udp
+context=agent-control
+disallow=all
+allow=ulaw
+auth=auth-2001
+aors=aor-2001</code></pre>
+
+            <p>
+                Each softphone registers with its username and password (SIP Digest authentication,
+                see §3.8). The <code>context</code> parameter decides which part of the dialplan handles
+                calls coming from that endpoint: callers land in <code>from-internal</code>, agents in
+                <code>agent-control</code>, where the login/logout codes live.
+            </p>
+
+            <h3>3.3 The dialplan: contexts, extensions and priorities</h3>
+
+            <p>
+                The dialplan is a small procedural language. It is divided into <strong>contexts</strong>;
+                inside each context, an <code>exten</code> line matches a dialled number and runs a sequence
+                of <strong>priorities</strong> (applications). The <code>n</code> priority means &ldquo;next&rdquo;.
+                Patterns start with an underscore and use <code>X</code> (0–9), <code>Z</code> (1–9),
+                <code>N</code> (2–9) and <code>.</code> (any length), as shown in the course slides
+                <a href="#ref-2">[2]</a>. Built-in variables such as <code>${EXTEN}</code> and
+                <code>${CALLERID(num)}</code> make the dialplan dynamic.
+            </p>
+
+            <p class="listing-caption">Listing 3.2 — <code>extensions.conf</code>: basic routing</p>
+            <pre><code>[from-internal]
+; test extension: play a greeting
+exten =&gt; 600,1,NoOp(Test call from ${CALLERID(num)})
+ same =&gt; n,Playback(hello-world)
+ same =&gt; n,Hangup()
+
+; dial any 2xxx extension directly
+exten =&gt; _2XXX,1,NoOp(Internal call to ${EXTEN})
+ same =&gt; n,Dial(PJSIP/${EXTEN},20)
+ same =&gt; n,Hangup()
+
+; everything else goes to the IVR (most specific pattern wins)
+exten =&gt; _.,1,Goto(ivr-main,s,1)</code></pre>
+
+            <h3>3.4 Designing the IVR</h3>
+
+            <p>
+                An IVR greets the caller and offers a menu of DTMF options. We use
+                <code>Answer()</code> to establish the call, <code>Progress()</code> to signal early media
+                (the &ldquo;183 Session Progress&rdquo; mechanism studied in lecture 4
+                <a href="#ref-18">[18]</a>), and <code>Background()</code>, which plays a recording while
+                still listening for DTMF digits. <code>WaitExten(5)</code> waits five seconds for a digit;
+                <code>t</code> catches a timeout and <code>i</code> an invalid entry.
+            </p>
+
+            <p>
+                Our prompt (<code>cc-welcome</code>) is our own recording: &ldquo;<em>Welcome to the VoIP call
+                center. Press 1 for Sales, 2 for Technical Support, or 0 for the operator.</em>&rdquo; Instead
+                of hard-coding a destination per option, the menu stores the chosen queue in a channel
+                variable (<code>SELECTED_QUEUE</code>) and jumps to a single queueing context.
+            </p>
+
+            <p class="listing-caption">Listing 3.3 — IVR menu in <code>extensions.conf</code></p>
+            <pre><code>[ivr-main]
+exten =&gt; s,1,Answer()
+ same =&gt; n,Wait(1)
+ same =&gt; n,Progress()
+ same =&gt; n,Set(SELECTED_QUEUE=sales)     ; default destination
+ same =&gt; n,Background(cc-welcome)
+ same =&gt; n,WaitExten(5)
+
+exten =&gt; 1,1,Set(SELECTED_QUEUE=sales)
+ same =&gt; n,Goto(call-queue,s,1)
+
+exten =&gt; 2,1,Set(SELECTED_QUEUE=support)
+ same =&gt; n,Goto(call-queue,s,1)
+
+exten =&gt; 0,1,Goto(call-queue,s,1)        ; operator -> default queue
+exten =&gt; t,1,Goto(call-queue,s,1)        ; no digit pressed
+exten =&gt; i,1,Playback(invalid)
+ same =&gt; n,Goto(s,1)</code></pre>
+
+            <h3>3.5 Queues and agents: queues.conf</h3>
+
+            <p>
+                The <code>app_queue</code> module is Asterisk's ACD. A queue holds callers in a waiting
+                list, plays music on hold and periodic position announcements, and delivers each call to a
+                free member using a <strong>strategy</strong>
+                <a href="#ref-13">[13]</a>. The most common strategies are:
+            </p>
+
+            <ul>
+                <li><code>ringall</code> — ring every available member at once (first to answer wins);</li>
+                <li><code>leastrecent</code> — ring the member least recently called;</li>
+                <li><code>fewestcalls</code> — ring the member with the fewest answered calls;</li>
+                <li><code>rrmemory</code> — round-robin, remembering where the last call was dispatched;</li>
+                <li><code>random</code> — choose a member at random.</li>
+            </ul>
+
+            <p>
+                <code>timeout</code> and <code>retry</code> control how long a member is rung before the
+                agent is skipped; <code>maxlen</code> limits the queue size;
+                <code>announce-frequency</code> and <code>periodic-announce</code> produce the
+                &ldquo;your call is important to us&rdquo; messages. Members can be declared statically in
+                <code>queues.conf</code> (our demo) or added dynamically with
+                <code>AddQueueMember()</code>.
+            </p>
+
+            <p class="listing-caption">Listing 3.4 — Two queues in <code>queues.conf</code></p>
+            <pre><code>; /etc/asterisk/queues.conf (excerpt)
+[general]
+persistentmembers=yes
+
+[sales]
+strategy=ringall
+timeout=15
+retry=5
+maxlen=10
+joinannounce=cc-you-are-next
+announce-frequency=30
+periodic-announce-frequency=60
+periodic-announce=cc-please-hold
+musicclass=default
+member =&gt; PJSIP/2001,0,Agent-2001
+member =&gt; PJSIP/2002,0,Agent-2002
+
+[support]
+strategy=leastrecent
+timeout=20
+retry=5
+maxlen=10
+musicclass=default
+member =&gt; PJSIP/2002,0,Agent-2002</code></pre>
+
+            <p>
+                For a more realistic setup, agents can log in and out themselves: dialling
+                <code>*88</code> adds their own PJSIP channel to the queue and <code>*89</code> removes it
+                (<code>${CHANNEL(peername)}</code> gives us the current endpoint name). These two codes live
+                in the <code>agent-control</code> context assigned to agents in Listing 3.1.
+                In that case the static <code>member =&gt;</code> lines must be removed to avoid duplicates.
+            </p>
+
+            <p class="listing-caption">Listing 3.5 — Dynamic agent login/logout</p>
+            <pre><code>[agent-control]
+exten =&gt; *88,1,Set(MEMBER=PJSIP/${CHANNEL(peername)})
+ same =&gt; n,AddQueueMember(sales,${MEMBER})
+ same =&gt; n,Playback(agent-loginok)
+ same =&gt; n,Hangup()
+
+exten =&gt; *89,1,RemoveQueueMember(sales,PJSIP/${CHANNEL(peername)})
+ same =&gt; n,Playback(agent-loggedoff)
+ same =&gt; n,Hangup()</code></pre>
+
+            <h3>3.6 Queueing the caller</h3>
+
+            <p>
+                The <code>Queue()</code> application puts the caller into the queue chosen by the IVR.
+                Its last argument is a timeout (120 seconds here); when the timeout expires, dialplan
+                execution continues with the next priority, where we play an apology and offer voicemail
+                <a href="#ref-14">[14]</a>. While waiting, the caller hears music on hold and the periodic
+                announcements configured in Listing 3.4.
+            </p>
+
+            <p class="listing-caption">Listing 3.6 — The queueing context</p>
+            <pre><code>[call-queue]
+exten =&gt; s,1,Progress()
+ same =&gt; n,Queue(${SELECTED_QUEUE},,,,120)
+ same =&gt; n,Playback(cc-no-agent-available)
+ same =&gt; n,VoiceMail(1000@voip)
+ same =&gt; n,Hangup()</code></pre>
+
+            <p>
+                The <code>voicemail.conf</code> mailbox is declared as
+                <code>1000 =&gt; 1212, Call Center, cc@example.org</code>; the same credential is used by
+                the endpoint that owns the mailbox <a href="#ref-2">[2]</a>.
+            </p>
+
+            <h3>3.7 Monitoring: CDR and AMI</h3>
+
+            <p>
+                Asterisk writes a <strong>Call Detail Record (CDR)</strong> for every call: source,
+                destination, context, start/answer/end times, <code>duration</code>, <code>billsec</code>
+                and <code>disposition</code> (ANSWERED, NO ANSWER, BUSY, FAILED). By default the records are
+                CSV files in <code>/var/log/asterisk/cdr-csv/</code>
+                <a href="#ref-15">[15]</a>. They are the basis for the statistics in section 4.
+            </p>
+
+            <p>
+                For live supervision, the <strong>Asterisk Manager Interface (AMI)</strong> exposes
+                commands and events over a TCP socket using simple <code>Key: Value</code> pairs
+                <a href="#ref-16">[16]</a>. Events of type <em>Agent</em> (for example
+                <code>AgentCalled</code>, <code>AgentConnect</code>, <code>AgentComplete</code>) and queue
+                events (<code>QueueMemberAdded</code>, <code>QueueMemberRemoved</code>) let an external
+                program build a wallboard showing agent states in real time. A minimal session looks like
+                this:
+            </p>
+
+            <p class="listing-caption">Listing 3.7 — AMI session (login + queue status)</p>
+            <pre><code>Action: Login
+Username: admin
+Secret: MySecret
+
+Action: QueueStatus
+Queue: sales</code></pre>
+
+            <p>
+                Complementary interfaces are <strong>AGI</strong>, which invokes an external script (in any
+                language) from the dialplan to consult a CRM/database, and <strong>ARI</strong>, a REST API
+                for building completely custom communication applications <a href="#ref-2">[2]</a>.
+            </p>
+
+            <h3>3.8 Security considerations</h3>
+
+            <p>
+                Our extensions authenticate with SIP Digest (a challenge/response mechanism that hashes
+                the password, with <code>401 Unauthorized</code> or <code>407 Proxy Authentication
+                Required</code> responses). For production use, lecture 13
+                <a href="#ref-17">[17]</a> recommends adding a TLS transport (<code>protocol=tls</code>,
+                with a certificate signed by a trusted CA) so signaling is encrypted hop by hop, plus SRTP
+                for the media stream. IP-based ACLs in <code>pjsip.conf</code> can additionally restrict
+                which addresses are allowed to register.
+            </p>
+
+            <h3>3.9 The complete call flow</h3>
+
+            <p>Putting all the pieces together, one call through our call center follows these steps:</p>
+
+            <ol>
+                <li>The caller's Linphone registers as extension 1000 and dials the call center number.</li>
+                <li>PJSIP creates a channel and the <code>from-internal</code> dialplan sends the call to <code>ivr-main</code>.</li>
+                <li>Asterisk answers, plays the welcome prompt and waits for a DTMF digit.</li>
+                <li>The chosen option sets <code>SELECTED_QUEUE</code> (sales or support) and jumps to <code>call-queue</code>.</li>
+                <li><code>Queue()</code> places the caller on hold, plays announcements and rings free agents with the configured strategy.</li>
+                <li>An agent answers on extension 2001/2002; Asterisk bridges both channels and AMI reports an <code>AgentConnect</code> event.</li>
+                <li>Either party hangs up; the bridge is destroyed and a CDR with duration and disposition is written.</li>
+            </ol>
+
+            <div class="callout info">
+                <strong>In short:</strong> PJSIP handles <em>who</em> can call, the dialplan handles
+                <em>where</em> the call goes, the IVR handles <em>what the caller wants</em>,
+                <code>queues.conf</code> handles <em>who answers</em>, and CDR/AMI handle
+                <em>what happened</em>. Section 4 demonstrates the whole chain live.
+            </div>
+        </section>
+
+        <!-- ===================== 4. PRACTICAL DEMONSTRATION ===================== -->
+        <section class="section" id="demonstration">
+            <h2><span class="section-number">4</span> Practical Demonstration</h2>
+
+            <h3>4.1 Laboratory topology</h3>
+
+            <p>
+                The lab runs on a single physical computer with a dual-boot Windows/Linux installation.
+                Windows stays as the working environment and hosts <strong>VirtualBox</strong>; inside it,
+                an <strong>Ubuntu Desktop 24.04 LTS</strong> virtual machine runs Asterisk. The virtual network
+                adapter is configured in <em>bridged</em> mode, so the VM and the Windows host share the same
+                LAN segment and can reach each other directly — no NAT traversal is needed. Linphone runs on
+                Windows as the caller (extension 1000) and as the two agents (2001 and 2002); additional
+                callers can be registered from mobile phones on the same Wi-Fi network.
+            </p>
+
+            <p class="listing-caption">Figure 4.1 — Topology of the laboratory setup (example addresses)</p>
+            <pre><code>   Windows host (192.168.1.20)                Ubuntu VM - bridged (192.168.1.50)
+   ┌────────────────────────────┐             ┌────────────────────────────────┐
+   │ Linphone 1000  (caller)    │  UDP 5060   │ Asterisk 20 (PJSIP)            │
+   │ Linphone 2001  (agent)     │ ──────────► │  · pjsip.conf                  │
+   │ Linphone 2002  (agent)     │  RTP        │  · extensions.conf + IVR       │
+   │ Wireshark (capture)        │ ◄────────── │  · queues.conf (sales/support) │
+   │ Web browser (this website) │  20000+     │  · CDR + AMI                   │
+   └────────────────────────────┘             └────────────────────────────────┘</code></pre>
+
+            <p>
+                The addresses above are examples: the real address of the VM is discovered with
+                <code>ip addr show</code> (look for <code>eth0</code>/<code>enp0s3</code>) and must be written
+                into Linphone's <em>domain</em> field and into the SIPp command later.
+            </p>
+
+            <h3>4.2 Building the server</h3>
+
+            <ol>
+                <li>Install <strong>VirtualBox</strong> on Windows and create a VM with 2 CPUs, 4 GB RAM, a
+                    25 GB virtual disk and an Ubuntu Desktop 24.04 LTS image.</li>
+                <li>In the VM settings set <strong>Network → Adapter 1 → Attached to: Bridged Adapter</strong>.
+                    This is the single most important setting for SIP to work.</li>
+                <li>Install Ubuntu and, in the VM, run:
+                    <pre><code>sudo apt update
+sudo apt install asterisk asterisk-sounds-en espeak-ng sox sip-tester tshark</code></pre>
+                    The package <code>sip-tester</code> provides SIPp (lecture 6
+                    <a href="#ref-19">[19]</a>) and <code>tshark</code> is the command-line Wireshark.</li>
+                <li><strong>Take a VirtualBox snapshot here</strong> (&ldquo;clean install&rdquo;) — it lets us
+                    return to a working state if a later configuration breaks the server.</li>
+                <li>Check the installation:
+                    <pre><code>sudo systemctl status asterisk
+sudo asterisk -rvvv     # Asterisk CLI: 'core show version', 'pjsip show endpoints'
+exit</code></pre></li>
+            </ol>
+
+            <h3>4.3 Configuration files and voice prompts</h3>
+
+            <p>
+                The definitive configuration files used in this lab are shipped with this website in the
+                <code>website/lab/</code> folder: <a href="lab/pjsip.conf">pjsip.conf</a>,
+                <a href="lab/extensions.conf">extensions.conf</a>,
+                <a href="lab/queues.conf">queues.conf</a>,
+                <a href="lab/voicemail.conf">voicemail.conf</a> and a short
+                <a href="lab/README.md">lab guide</a>. They are copies of Listings 3.1–3.6 with the example IP
+                addresses adapted. Copy them into the VM and reload:
+            </p>
+
+            <pre><code>sudo cp ~/lab/pjsip.conf ~/lab/extensions.conf ~/lab/queues.conf \
+        ~/lab/voicemail.conf /etc/asterisk/
+sudo chown asterisk:asterisk /etc/asterisk/{pjsip,extensions,queues,voicemail}.conf
+sudo asterisk -rx "core reload"
+sudo asterisk -rx "pjsip reload"
+sudo asterisk -rx "queue reload all"</code></pre>
+
+            <p>
+                Instead of using copyright-licensed music or generic system recordings, our IVR prompts are
+                generated with the open-source speech synthesizer <strong>eSpeak-ng</strong> and resampled to
+                the 8 kHz mono format Asterisk expects, using <strong>sox</strong>:
+            </p>
+
+            <pre><code>espeak-ng -w /tmp/welcome.wav -s 135 \
+  "Welcome to the VoIP call center. Press 1 for Sales, 2 for Technical Support, or 0 for the operator."
+sox /tmp/welcome.wav -r 8000 -c 1 -b 16 /tmp/cc-welcome.wav
+sudo cp /tmp/cc-welcome.wav /var/lib/asterisk/sounds/en/
+sudo chown asterisk:asterisk /var/lib/asterisk/sounds/en/cc-welcome.wav</code></pre>
+
+            <p>
+                The same procedure produces <code>cc-you-are-next.wav</code>,
+                <code>cc-please-hold.wav</code> and <code>cc-no-agent-available.wav</code>. Other prompts
+                (<code>hello-world</code>, <code>invalid</code>, <code>agent-loginok</code>) come from the
+                <code>asterisk-sounds-en</code> package. After copying the prompts and the configs, take a
+                second snapshot (&ldquo;configured call center&rdquo;).
+            </p>
+
+            <h3>4.4 Configuring Linphone</h3>
+
+            <p>
+                Open Linphone on Windows and add a SIP account for each participant:
+            </p>
+
+            <ul>
+                <li><strong>Username:</strong> 1000 (caller), 2001 and 2002 (agents);</li>
+                <li><strong>Password:</strong> the one from <code>pjsip.conf</code> (e.g. <code>Secret1000!</code>);</li>
+                <li><strong>Domain:</strong> the VM's IP address (e.g. <code>192.168.1.50</code>);</li>
+                <li><strong>Transport:</strong> UDP, port 5060; <strong>codec:</strong> PCMU/G.711u (ulaw),
+                    matching <code>allow=ulaw</code> in the endpoint configuration.</li>
+            </ul>
+
+            <p>
+                In the Asterisk CLI, <code>pjsip show contacts</code> must list all three endpoints with a
+                contact URI and status <em>Avail</em>. That confirms that registration and authentication
+                are working before we place any call.
+            </p>
+
+            <h3>4.5 Demonstration scenario: a call from start to finish</h3>
+
+            <p>
+                The following script is executed live and each step is captured as evidence for the website.
+                In the table, &ldquo;evidence&rdquo; means a screenshot or the corresponding CLI output.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Action</th>
+                        <th>Expected observation</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Show <code>pjsip show contacts</code> and <code>queue show</code></td>
+                        <td>3 registered endpoints; <code>sales</code> has 2 members,<br><code>support</code> has 1</td>
+                        <td><code>cc-registration.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Caller 1000 dials <code>500</code> (matches the <code>_.</code> pattern)</td>
+                        <td>The welcome prompt is heard; DTMF 1/2/0 accepted</td>
+                        <td><code>cc-ivr.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Press <strong>1</strong> (Sales)</td>
+                        <td>Caller hears the position announcement and music on hold;<br><code>queue show sales</code> shows 1 waiting caller</td>
+                        <td><code>cc-queue.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Agents 2001 and 2002 ring (<code>ringall</code>); 2001 answers</td>
+                        <td>Audio bridge established; <code>core show channels</code> shows 2 channels</td>
+                        <td><code>cc-agent.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Second caller presses <strong>2</strong> (Support)</td>
+                        <td>Call goes to agent 2002; demonstrates queue selection by IVR</td>
+                        <td><code>cc-second-queue.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>A hangup, then inspect the CDR file</td>
+                        <td>New CSV row with <code>duration</code>, <code>billsec</code> and <code>ANSWERED</code></td>
+                        <td><code>cc-cdr.png</code></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Optional: agents dial <code>*89</code> to log out, then a new call arrives</td>
+                        <td>Call waits until the queue timeout and falls back to voicemail</td>
+                        <td><code>cc-timeout.png</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout info">
+                <strong>Demo tip:</strong> for step 7, temporarily reduce the <code>Queue()</code> timeout from
+                120 to 20 seconds in <code>extensions.conf</code> so the audience does not wait two minutes.
+                Restore it afterwards and take a new snapshot.
+            </div>
+
+            <h3>4.6 Traffic capture with Wireshark / tcpdump</h3>
+
+            <p>
+                To prove that the signaling and the media really traverse our server, we capture the traffic
+                on the VM during a call. Because the adapter is bridged, Wireshark on the Windows host can see
+                the same packets; we also capture on the server itself with <code>tshark</code>:
+            </p>
+
+            <pre><code>sudo tshark -i eth0 -w /tmp/callcenter.pcap \
+  -f "port 5060 or (udp portrange 20000-30000)"</code></pre>
+
+            <p>
+                In Wireshark, the display filter <code>sip || rtp</code> shows exactly the protocol sequence
+                studied in class: <code>REGISTER → 200 OK</code>, <code>INVITE → 100 Trying → 180 Ringing →
+                200 OK → ACK</code>, the DTMF digits sent as RFC 2833 telephone-event packets
+                <a href="#ref-20">[20]</a>, the RTP audio stream, and finally <code>BYE → 200 OK</code>.
+                The Wireshark <em>Telephony → RTP Streams</em> view can even play back the captured
+                conversation — a very strong piece of evidence for the demonstration.
+            </p>
+
+            <h3>4.7 Generating load with SIPp</h3>
+
+            <p>
+                To show that the queue behaves correctly under more than one call, we use SIPp
+                <a href="#ref-19">[19]</a> to generate several simultaneous callers. The default
+                <code>uac</code> scenario is enough; digest credentials are passed with <code>-au/-ap</code>
+                and the destination number <code>500</code> reaches our IVR:
+            </p>
+
+            <pre><code>sipp -sn uac 192.168.1.50 -s 500 -au 1000 -ap 'Secret1000!' \
+     -r 2 -rp 3000 -l 5 -m 10 -d 20000 -aa</code></pre>
+
+            <p>
+                This starts two calls per second, with at most five parallel calls, for ten calls total.
+                While it runs, <code>queue show sales</code> shows callers waiting and agents busy; afterwards
+                <code>tail /var/log/asterisk/cdr-csv/Master.csv</code> shows one CDR per generated call.
+                This is the bridge between our lab and the monitoring concepts of lecture 11
+                <a href="#ref-15">[15]</a>.
+            </p>
+
+            <h3>4.8 Measurements and results</h3>
+
+            <div class="pending">
+                <strong>To be completed after running the lab.</strong> The table below is the template to
+                fill in with the real measurements obtained on our setup. No values are invented here —
+                the final website will contain the recorded data and the screenshots listed in section 4.5.
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Scenario 1 (manual calls)</th>
+                        <th>Scenario 2 (SIPp load)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Calls generated</td><td>—</td><td>—</td></tr>
+                    <tr><td>Calls answered by an agent</td><td>—</td><td>—</td></tr>
+                    <tr><td>Calls that reached voicemail / timed out</td><td>—</td><td>—</td></tr>
+                    <tr><td>Maximum callers waiting in queue</td><td>—</td><td>—</td></tr>
+                    <tr><td>Average waiting time (s)</td><td>—</td><td>—</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                A sample CDR row will be annotated field by field using the terminology of lecture 11
+                (<code>src</code>, <code>dst</code>, <code>billsec</code>, <code>disposition</code>).
+                If time permits, the RTP statistics from Wireshark (packet count, jitter, lost packets)
+                will be added to relate the practical result to the quality concepts of lecture 12
+                <a href="#ref-21">[21]</a>.
+            </p>
+
+            <h3>4.9 Troubleshooting checklist</h3>
+
+            <ul>
+                <li><strong>Endpoint does not register</strong> → check username/password in
+                    <code>auth</code>, the <code>aor</code> association and UDP 5060 reachability;
+                    use <code>pjsip show contacts</code>.</li>
+                <li><strong>Call connects but no audio</strong> → check the firewall and the RTP port range
+                    in <code>rtp.conf</code> (default UDP 20000–30000), and that the VM uses bridged networking.</li>
+                <li><strong>DTMF not recognized by the IVR</strong> → set <code>dtmfmode=rfc2833</code>
+                    in the endpoint and verify the telephone-event packets in Wireshark
+                    <a href="#ref-20">[20]</a>.</li>
+                <li><strong>A prompt is missing</strong> → reinstall <code>asterisk-sounds-en</code> or
+                    generate that prompt with eSpeak-ng, as in §4.3.</li>
+                <li><strong>Agents do not ring</strong> → run <code>queue show</code> and check member states;
+                    a statically configured member and a dynamic <code>AddQueueMember</code> of the same
+                    extension must not coexist.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== 5. OPINION & CONTRIBUTION ===================== -->
+        <section class="section" id="opinion">
+            <h2><span class="section-number">5</span> Opinion &amp; Contribution</h2>
+
+            <h3>5.1 Our opinion on the topic</h3>
+
+            <p>
+                Working on this topic changed our view of call centers. Before the project we saw them as
+                old-fashioned rooms full of headsets; after configuring one ourselves we realized that the
+                <em>logic</em> is what matters, not the hardware. Even in 2026, when chat bots and messaging
+                apps are everywhere, a voice call is still the fastest way to resolve an urgent or complex
+                problem, and the same three mechanisms — menu, queue, agent — are present in cloud platforms
+                costing hundreds of euros per agent per month.
+            </p>
+
+            <p>
+                Our opinion on <strong>Asterisk</strong> is two-sided. On the positive side, it is extremely
+                complete: PJSIP, the dialplan, <code>app_queue</code>, voicemail, CDR and AMI all worked
+                together in a single application, without buying any licence. On the negative side, the
+                learning curve is steep: the same name can be reused for different PJSIP object types,
+                a single typo in the dialplan silently changes the call flow, and Asterisk has no graphical
+                interface by default (FreePBX exists, but we intentionally configured everything by hand to
+                understand what happens underneath). Debugging with <code>asterisk -rvvv</code> and Wireshark
+                was essential — and educational.
+            </p>
+
+            <p>
+                We are also aware of the limits of our implementation. One Asterisk instance is a single
+                point of failure; the built-in queues do not provide omnichannel routing, AI-based
+                prioritization or detailed analytics; and CDR files are only raw data, not reports. For a
+                production contact center, a redundant cluster, a database-backed agent directory and a
+                monitoring stack such as HOMER <a href="#ref-11">[11]</a> would be needed. Nevertheless, for
+                learning and for a small organization, we consider open-source Asterisk an excellent choice.
+            </p>
+
+            <h3>5.2 Our contribution to the elaboration of the project</h3>
+
+            <p>
+                The assignment explicitly asks for our own contribution to the elaboration of the project.
+                Our work goes beyond following a configuration tutorial in the following points:
+            </p>
+
+            <ol>
+                <li>
+                    <strong>A unified IVR-to-queue design.</strong> Instead of creating a separate dialplan
+                    branch for every menu option, the IVR stores the destination in the channel variable
+                    <code>SELECTED_QUEUE</code> and hands all calls to one <code>call-queue</code> context.
+                    Adding a fourth department later requires changing only the variable value in one line.
+                </li>
+                <li>
+                    <strong>Agent self-service login/logout.</strong> The <code>*88</code>/<code>*89</code>
+                    codes derive the member interface from <code>${CHANNEL(peername)}</code>, so any agent
+                    extension can join or leave the queue without editing <code>queues.conf</code> — a small
+                    but practical, reproduction-friendly detail.
+                </li>
+                <li>
+                    <strong>Fully original voice prompts.</strong> The IVR recordings are generated with
+                    eSpeak-ng and resampled with sox (§4.3). No copyrighted audio library is used, and the
+                    whole prompt set can be regenerated from a single command.
+                </li>
+                <li>
+                    <strong>A reproducible validation method.</strong> We did not limit ourselves to a manual
+                    call: SIPp generates controlled load against the queue, while CDR, <code>queue show</code>
+                    and a Wireshark RTP capture provide three independent views of the same calls.
+                    Combining these tools comes directly from the course material
+                    <a href="#ref-15">[15]</a> <a href="#ref-19">[19]</a> and, as far as we know, is not
+                    presented as a single workflow in any of the lectures.
+                </li>
+                <li>
+                    <strong>A comparison of queue strategies in practice.</strong> Two queues use different
+                    strategies (<code>ringall</code> for Sales, <code>leastrecent</code> for Support) so their
+                    behaviour can be compared during the same demonstration, instead of merely listing the
+                    strategies in theory.
+                </li>
+                <li>
+                    <strong>Documentation as a deliverable.</strong> The configuration files are shipped
+                    together with this website, and every step of the lab is documented with expected
+                    output and a troubleshooting checklist, so the project can be reproduced by another
+                    student without assistance.
+                </li>
+            </ol>
+
+            <h3>5.3 What we learned</h3>
+
+            <p>
+                Technically, we learned how SIP registration and authentication work in practice, how to
+                build a dialplan and an IVR, how call queues distribute calls and how CDR and AMI expose
+                what happened inside Asterisk. We also practised network analysis with Wireshark and traffic
+                generation with SIPp. Academically, the most valuable lesson was understanding why the
+                protocols studied in the first half of the course — SDP offer/answer, early media, DTMF
+                transport, RTP — are not abstract theory but the mechanisms that make a queue announcement
+                or a menu press work.
+            </p>
+        </section>
+
+        <!-- ===================== 6. CONCLUSION ===================== -->
+        <section class="section" id="conclusion">
+            <h2><span class="section-number">6</span> Conclusion</h2>
+
+            <p>
+                This project has shown that a functional call center — with an IVR menu, two call queues
+                and dynamically manageable agents — can be built entirely with open-source software on a
+                single Ubuntu virtual machine. The demonstration confirmed that the whole chain works: a
+                caller reaches the menu, DTMF input selects a department, the queue rings free agents,
+                the conversation is bridged, and every call leaves a CDR record that can be used for
+                statistics. Traffic captures verified the SIP and RTP behaviour predicted by the theory.
+            </p>
+
+            <p>
+                The solution is not intended to replace a carrier-grade contact center: it lacks
+                redundancy, omnichannel support and advanced analytics. Its value lies elsewhere — it is
+                free, transparent, reproducible and small enough to be fully understood by the people who
+                operate it. For a semestral project it offered the right balance between theory and
+                practice, and it connected most of the topics covered during the semester: SIP, RTP, codecs,
+                early media, Asterisk configuration, quality of service and monitoring.
+            </p>
+
+            <p>
+                As future work we would consider connecting Linphone directly from the browser through
+                WebRTC <a href="#ref-7">[7]</a>, storing agents and queue rules in a database, adding
+                TLS/SRTP encryption <a href="#ref-17">[17]</a>, and building a small web dashboard fed by
+                AMI events <a href="#ref-16">[16]</a> to display agent states in real time. These extensions
+                would turn the laboratory setup into a system closer to what commercial environments use
+                today, while keeping the open-source foundation intact.
+            </p>
+
+            <div class="callout info">
+                <strong>Final statement:</strong> the objectives of the assignment have been met — a
+                selected technology was described in detail, a working practical demonstration was
+                carried out, and the resulting documentation is published as this website.
+            </div>
+        </section>
+
+        <!-- ===================== 7. REFERENCES ===================== -->
+        <section class="section" id="references">
+            <h2><span class="section-number">7</span> References</h2>
+            <ol class="references-list">
+                <li id="ref-1">Asterisk. <em>The world's most popular open source communications
+                    project.</em> Available at: https://www.asterisk.org/ (accessed: 2026).</li>
+                <li id="ref-2">F. Řezáč, M. Vozňák. <em>VoIP I — Lecture slides 8–9: Asterisk —
+                    Introduction, Architecture, Configuration and Application.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-3">Wikipedia contributors. <em>Call centre.</em> In: Wikipedia, The Free
+                    Encyclopedia. Available at: https://en.wikipedia.org/wiki/Call_centre
+                    (accessed: 2026).</li>
+                <li id="ref-4">IETF. <em>RFC 3261 — SIP: Session Initiation Protocol.</em> Available at:
+                    https://datatracker.ietf.org/doc/html/rfc3261 (accessed: 2026).</li>
+                <li id="ref-5">Amazon Web Services. <em>Amazon Connect — Cloud contact center.</em>
+                    Available at: https://aws.amazon.com/connect/ (accessed: 2026).</li>
+                <li id="ref-6">Genesys. <em>Genesys Cloud — Customer experience platform.</em> Available
+                    at: https://www.genesys.com/ (accessed: 2026).</li>
+                <li id="ref-7">FreeSWITCH. <em>FreeSWITCH — A cross-platform Softswitch.</em> Available
+                    at: https://freeswitch.org/ (accessed: 2026).</li>
+                <li id="ref-8">Kamailio. <em>Kamailio SIP Server.</em> Available at:
+                    https://www.kamailio.org/ (accessed: 2026).</li>
+                <li id="ref-9">VICIdial. <em>VICIdial — Open source call center suite.</em> Available at:
+                    https://www.vicidial.org/ (accessed: 2026).</li>
+                <li id="ref-10">F. Řezáč. <em>VoIP I — Lecture slides 7: WebRTC — From Service to
+                    Function.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-11">W3C. <em>WebRTC 1.0: Real-Time Communication Between Browsers.</em>
+                    Available at: https://www.w3.org/TR/webrtc/ (accessed: 2026).</li>
+                <li id="ref-12">Asterisk Project. <em>PJSIP configuration — channel driver documentation.</em>
+                    Available at: https://docs.asterisk.org/Configuration/Channel-Drivers/PJSIP/
+                    (accessed: 2026).</li>
+                <li id="ref-13">Asterisk Project. <em>Configuring queues — queues.conf.</em> Available at:
+                    https://wiki.asterisk.org/wiki/display/AST/Configuring+Queues (accessed: 2026).</li>
+                <li id="ref-14">Asterisk Project. <em>Queue() application.</em> Available at:
+                    https://wiki.asterisk.org/wiki/display/AST/Application_Queue (accessed: 2026).</li>
+                <li id="ref-15">F. Řezáč. <em>VoIP I — Lecture slides 11: Monitoring and Management of SIP
+                    Sessions — CDR, HEP protocol, HOMER, Billing.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-16">Asterisk Project. <em>Asterisk Manager Interface (AMI).</em> Available at:
+                    https://wiki.asterisk.org/wiki/display/AST/Asterisk+Manager+Interface
+                    (accessed: 2026).</li>
+                <li id="ref-17">F. Řezáč. <em>VoIP I — Lecture slides 13: Introduction to VoIP security —
+                    SIP over TLS, S/MIME, SRTP, ZRTP, DTLS.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-18">F. Řezáč, M. Vozňák. <em>VoIP I — Lecture slides 4: SIP protocol —
+                    Early Media, Header Fields, SIP and NAT.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-19">F. Řezáč. <em>VoIP I — Lecture slides 6: SIPp — Simulation Tool for
+                    VoIP Networks.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-20">F. Řezáč, M. Vozňák. <em>VoIP I — Lecture slides 1: Introduction to
+                    VoIP — protocols, RTP, DTMF (RFC 2833) and bandwidth.</em> VSB-TU Ostrava, 2024.</li>
+                <li id="ref-21">F. Řezáč. <em>VoIP I — Lecture slides 12: Quality in IP telephony —
+                    MOS, PESQ, E-model, packet loss, delay, jitter and QoS.</em> VSB-TU Ostrava, 2024.</li>
+            </ol>
+        </section>
+
+        <footer class="page-footer">
+            <p>VoIP I — Semestral Project · Faculty of Electrical Engineering and Computer Science, VSB-TU Ostrava</p>
+            <p>Sergio Alcaide Nieto · Carlos Antonio Alonso Antona</p>
+        </footer>
+
+    </main>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
