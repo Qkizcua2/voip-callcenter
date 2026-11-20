@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Center on Asterisk — Presentation</title>
+    <link rel="stylesheet" href="css/presentation.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <div class="slide-deck">
+
+        <!-- ================= SLIDE 1: TITLE ================= -->
+        <section class="slide" id="s1">
+            <header class="slide-header">
+                <span class="slide-kicker">Semestral project — VoIP I</span>
+                <h2>Call Center on Asterisk</h2>
+            </header>
+            <div class="slide-body">
+                <p><strong>Sergio Alcaide Nieto</strong></p>
+                <p><strong>Carlos Antonio Alonso Antona</strong></p>
+                <p>Faculty of Electrical Engineering and Computer Science<br>VSB-TU Ostrava</p>
+                <p><em>Topic 8 of the assignment</em></p>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 2: CONTEXT ================= -->
+        <section class="slide" id="s2">
+            <header class="slide-header">
+                <span class="slide-kicker">Context</span>
+                <h2>What is a call center?</h2>
+            </header>
+            <div class="slide-body">
+                <ul>
+                    <li>A call center is the point of contact between a company and its customers by phone.</li>
+                    <li>Core components: <strong>IVR</strong> (menus driven by DTMF), <strong>queues</strong>
+                        (callers wait for agents), <strong>agents</strong> (operators).</li>
+                    <li>Traditional solutions: proprietary platforms (Genesys, Cisco, Avaya) — expensive,
+                        per-agent licensing, complex.</li>
+                    <li>Open source alternative: <strong>Asterisk</strong> — the world&rsquo;s most popular
+                        open-source communications project. Native support for IVR, queues, agents.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 3: WHAT WE BUILT ================= -->
+        <section class="slide" id="s3">
+            <header class="slide-header">
+                <span class="slide-kicker">The built system</span>
+                <h2>Call center with 3 pillars</h2>
+            </header>
+            <div class="slide-body">
+                <pre class="callflow"><code>Caller &rarr; (500) &rarr; IVR menu &rarr; (1) &rarr; Sales queue &rarr; ringall
+                                                  &rarr; Agent 2001 answers &rarr; call bridged
+                Caller &rarr; (500) &rarr; IVR menu &rarr; (2) &rarr; Support queue &rarr; leastrecent
+                                                  &rarr; Agent 2002 answers &rarr; call bridged
+                Anyone &rarr; (500) &rarr; IVR menu &rarr; timeout &rarr; VoiceMail(1000)</code></pre>
+                <div class="features">
+                    <span class="feature"><strong>IVR</strong><br>Welcome menu, options 1–2–0</span>
+                    <span class="feature"><strong>Queue: Sales</strong><br><code>ringall</code>, timeout 15 s</span>
+                    <span class="feature"><strong>Queue: Support</strong><br><code>leastrecent</code>, timeout 20 s</span>
+                    <span class="feature"><strong>Agents 2001/2002</strong><br>Dynamic login: <code>*88</code>/<code>*89</code></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 4: STATE OF THE ART ================= -->
+        <section class="slide" id="s4">
+            <header class="slide-header">
+                <span class="slide-kicker">State of the art</span>
+                <h2>Call centers evolution</h2>
+            </header>
+            <div class="slide-body">
+                <ul>
+                    <li><strong>Traditional (TDM):</strong> ACD on circuit-switched networks, rigid and vendor-locked.</li>
+                    <li><strong>IP era (2000s):</strong> SIP-based contact centers — flexibility, agents anywhere.</li>
+                    <li><strong>Cloud (2010s+):</strong> CCaaS (Genesys, Amazon Connect), paid per agent — omnichannel + AI.</li>
+                </ul>
+                <h3 class="subtitle">Open-source landscape</h3>
+                <table class="soc">
+                    <thead>
+                        <tr><th>Platform</th><th>Role</th><th>Call center features</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Asterisk</td><td>PBX / media server</td><td>Native (queues, IVR, agents)</td></tr>
+                        <tr><td>FreeSWITCH</td><td>PBX / media server</td><td>Native (modular, high load)</td></tr>
+                        <tr><td>Kamailio</td><td>SIP proxy</td><td>Signaling only, high scalability</td></tr>
+                    </tbody>
+                </table>
+                <ul>
+                    <li><strong>Current trends:</strong> WebRTC agents (the &ldquo;website becomes the call center&rdquo;),
+                        AI routing and speech recognition in cloud platforms.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 5: TECH - ASTERISK ================= -->
+        <section class="slide" id="s5">
+            <header class="slide-header">
+                <span class="slide-kicker">Technology</span>
+                <h2>Asterisk core</h2>
+            </header>
+            <div class="slide-body">
+                <p><strong>Architecture:</strong> core + modules + channels + dialplan.</p>
+                <pre class="callflow"><code>/etc/asterisk/
+&#9500;&#9492;&#9492; pjsip.conf       &rarr; SIP accounts (PJSIP objects: transport, auth, AoR, endpoint)
+&#9500;&#9492;&#9492; extensions.conf &rarr; dialplan (contexts, exten, priorities, IVR, queueing)
+&#9500;&#9492;&#9492; queues.conf      &rarr; call queues (strategies, timeouts, announcements)
+&#9500;&#9492;&#9492; voicemail.conf   &rarr; voicemail boxes
+                </code></pre>
+                <p><strong>Key point:</strong> every call goes through the dialplan, which decides
+                    <em>who can call, where the call goes, who answers, what happened (CDR).</em></p>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 6: TECH - PJSIP ================= -->
+        <section class="slide" id="s6">
+            <header class="slide-header">
+                <span class="slide-kicker">Technology</span>
+                <h2>Endpoint configuration (pjsip.conf)</h2>
+            </header>
+            <div class="slide-body">
+                <pre class="callflow"><code>[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+
+[auth-2001]
+type=auth
+username=2001
+password=Secret2001!
+
+[aor-2001]
+type=aor
+max_contacts=1
+
+[2001]
+type=endpoint
+context=agent-control
+allow=ulaw
+dtmfmode=rfc2833
+auth=auth-2001
+aors=aor-2001
+                </code></pre>
+                <p class="note">Full listings (with the caller and the other agent) are in the
+                    documentation: <a href="index.html#technology" class="doc-link">Technology section &rarr;</a></p>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 7: TECH - DIALPLAN + IVR ================= -->
+        <section class="slide" id="s7">
+            <header class="slide-header">
+                <span class="slide-kicker">Technology</span>
+                <h2>Dialplan + IVR</h2>
+            </header>
+            <div class="slide-body">
+                <pre class="callflow"><code>[ivr-main]
+exten =&gt; s,1,Answer()
+ same =&gt; n,Progress()                  ; early media
+ same =&gt; n,Set(SELECTED_QUEUE=sales)   ; default destination
+ same =&gt; n,Background(cc-welcome)      ; our recording: press 1, 2 or 0
+ same =&gt; n,WaitExten(5)
+
+exten =&gt; 1,1,Set(SELECTED_QUEUE=sales)   &rarr; Queue(${SELECTED_QUEUE},,,,120)
+exten =&gt; 2,1,Set(SELECTED_QUEUE=support) &rarr; Queue(${SELECTED_QUEUE},,,,120)
+                </code></pre>
+                <p><strong>Design:</strong> instead of one dialplan branch per menu option, the IVR stores
+                    the destination in a channel variable and sends all calls to a single
+                    <code>Queue()</code> context — adding a new department means changing one line.</p>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 8: DEMO ================= -->
+        <section class="slide" id="s8">
+            <header class="slide-header">
+                <span class="slide-kicker">Demonstration</span>
+                <h2>Laboratory setup</h2>
+            </header>
+            <div class="slide-body">
+                <pre class="callflow"><code>   Windows (Dual Boot)                    Ubuntu VM - bridged
+   ┌────────────────────────────┐     ┌──────────────────────────────┐
+   │ Linphone 1000  (caller)    │────►│ Asterisk 20 (PJSIP)          │
+   │ Linphone 2001  (agent)     │     │  · pjsip.conf                │
+   │ Linphone 2002  (agent)     │     │  · extensions.conf + IVR     │
+   │                            │◄────│  · queues.conf               │
+   │                            │ RTP │  · CDR + AMI                 │
+   │ Wireshark (capture)        │     └──────────────────────────────┘
+   └────────────────────────────┘
+                </code></pre>
+                <ol>
+                    <li>Caller 1000 dials <code>500</code> &rarr; IVR welcome prompt &rarr; evidence: <code>cc-ivr.png</code></li>
+                    <li>Press <strong>1</strong> &rarr; sales queue &rarr; agents ring (<code>ringall</code>) &rarr; evidence: <code>cc-queue.png</code></li>
+                    <li>Press <strong>2</strong> on a second call &rarr; support queue &rarr; evidence: <code>cc-second-queue.png</code></li>
+                    <li>Hang up &rarr; check CDR row &rarr; evidence: <code>cc-cdr.png</code></li>
+                    <li>Wireshark capture: SIP + RTP streams &rarr; evidence: <code>cc-wireshark.png</code></li>
+                    <li>SIPp load test against the queue &rarr; statistics &rarr; evidence: <code>cc-load.png</code></li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 9: RESULTS ================= -->
+        <section class="slide" id="s9">
+            <header class="slide-header">
+                <span class="slide-kicker">Measured results</span>
+                <h2>Numbers from the lab</h2>
+            </header>
+            <div class="slide-body">
+                <table class="soc">
+                    <thead>
+                        <tr><th>Metric</th><th>Manual scenario</th><th>SIPp load</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Calls generated</td><td class="num">TBD</td><td class="num">TBD</td></tr>
+                        <tr><td>Calls answered by agent</td><td class="num">TBD</td><td class="num">TBD</td></tr>
+                        <tr><td>Calls timed out / to voicemail</td><td class="num">TBD</td><td class="num">TBD</td></tr>
+                        <tr><td>Max callers waiting</td><td class="num">TBD</td><td class="num">TBD</td></tr>
+                        <tr><td>Average waiting time</td><td class="num">TBD</td><td class="num">TBD</td></tr>
+                    </tbody>
+                </table>
+                <p class="note">A CDR sample is annotated in the documentation (<em>src, dst, duration, billsec,
+                    disposition</em>) — to be filled after executing the lab.</p>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 10: OPINION & CONTRIBUTION ================= -->
+        <section class="slide" id="s10">
+            <header class="slide-header">
+                <span class="slide-kicker">Opinion &amp; contribution</span>
+                <h2>Our own take on Asterisk</h2>
+            </header>
+            <div class="slide-body">
+                <ul>
+                    <li><strong>Positive:</strong> PJSIP + dialplan + <code>app_queue</code> form a complete,
+                        zero-licence call center — many modules work together out of the box.</li>
+                    <li><strong>Negative:</strong> steep learning curve, no default GUI, dialplan typos
+                        silently change flows — we configured everything by hand to understand it.</li>
+                    <li><strong>Our contribution:</strong> unified IVR→queue design via channel variable;
+                        dynamic agent login with <code>*88</code>/<code>*89</code>; original eSpeak-ng prompts;
+                        reproducible lab (SIPp + CDR + Wireshark) shipped with the docs.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 11: CONCLUSION ================= -->
+        <section class="slide" id="s11">
+            <header class="slide-header">
+                <span class="slide-kicker">Conclusion</span>
+                <h2>Result &amp; future work</h2>
+            </header>
+            <div class="slide-body">
+                <p><strong>Delivered:</strong> a working open-source call center (IVR, queues, agents)
+                    validated live and documented on GitHub Pages.</p>
+                <p><strong>Future work:</strong></p>
+                <ul>
+                    <li>WebRTC-based browser agents (W3C standard; Asterisk as gateway)</li>
+                    <li>Database-backed agents/rules + live dashboard via AMI events</li>
+                    <li>TLS/SRTP encryption for signaling and media</li>
+                    <li>AI routing and transcription in cloud-based stacks</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 12: Q&A ================= -->
+        <section class="slide" id="s12">
+            <div class="slide-body slide-centered">
+                <h2 class="big">Questions?</h2>
+                <p>Thanks for your attention.</p>
+                <div class="links">
+                    <a href="https://qkizcua2.github.io/voip-callcenter/" target="_blank">Web: qkizcua2.github.io/voip-callcenter</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- slide counter -->
+        <footer class="slide-footer">
+            <span class="slide-counter" id="slideCounter">1/12</span>
+            <span class="slide-controls">&larr; &rarr; or Space — Esc to open web &amp; print</span>
+        </footer>
+
+    </div>
+
+    <script src="js/presentation.js"></script>
+</body>
+</html>

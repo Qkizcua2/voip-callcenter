@@ -14,8 +14,11 @@ The website is static HTML/CSS/JS — no build step is required.
 | Path | Description |
 |---|---|
 | `index.html` | Single-page documentation with the seven sections required by the assignment |
+| `presentation.html` | 12 slides for the 10-minute presentation (semana 14) |
 | `css/styles.css` | Styles (sidebar navigation, code listings, responsive layout) |
+| `css/presentation.css` | Dark theme for the slides |
 | `js/main.js` | Scroll-spy navigation and mobile menu |
+| `js/presentation.js` | Slide navigation: arrows, space, j/k, Esc (open web) |
 | `lab/` | Asterisk configuration files and lab guide used by the practical demonstration |
 
 ## Repository state
