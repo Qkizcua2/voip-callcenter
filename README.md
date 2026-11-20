@@ -3,7 +3,7 @@
 Semestral project for **VoIP I** (Faculty of Electrical Engineering and Computer Science,
 VSB-TU Ostrava).
 
-**Authors:** Sergio Alcaide Nuggets and Carlos Antonio Alonso Antona
+**Authors:** Sergio Alcaide Nieto and Carlos Antonio Alonso Antona
 
 Published as: https://qkizcua2.github.io/voip-callcenter/
 
